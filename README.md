@@ -1,4 +1,4 @@
-<img src="https://capsule-render.vercel.app/api?type=waving&color=e65a4b&height=150&section=header&text=Ball_and_Beam Project&fontSize=50&fontColor=ffffff" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=1e2699&height=150&section=header&text=Ball_and_Beam Project&fontSize=50&fontColor=ffffff" />
 
 <a href="https://youtu.be/9qptE6XTPzs"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&link=https://youtu.be/9qptE6XTPzs"></a>
 
