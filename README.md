@@ -1,14 +1,15 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&color=ab51ef&height=150&section=header&text=Ball_and_Beam Project&fontSize=50&fontColor=ffffff" />
 
-
-<a href="https://youtu.be/9qptE6XTPzs"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white&link=https://youtu.be/9qptE6XTPzs"></a>
+<a href="https://youtu.be/9qptE6XTPzs"><img src="https://studio.youtube.com/video/EEtzcdL9Sp0/edit?style=for-the-badge&logo=youtube&logoColor=white&link=https://youtu.be/9qptE6XTPzs"></a>
 
 
 
 # **목차**
--[개요](#개요)
+- [개요](#개요)
   
--[게임설명](#게임설명)
+- [BangBangControl](#BangBangControl)
+
+- [PidControl](#PidControl)
 
 ## **개요**
 - ✏️**프로젝트 주제**✏️ : 공을 움직이고 제어하는 시스템의 설계 및 조정
@@ -20,54 +21,20 @@
   ![C](https://img.shields.io/badge/c-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white)
   
   
-## **게임설명**
-
--[메인게임](#메인게임)
-
--[미니게임1](#미니게임1)
-
--[미니게임2](#미니게임2)
-
--[미니게임3](#미니게임3)
+## **BangBangControl**
+- Band-bang Control : 시스템의 출력을 두 가지 상태 중 하나로만 전환시키는 방식.
+- 주어진 입력 조건에 따라 출력을 두 가지 상태 중 하나로만 바꾸는 간단한 제어 방식.
+- 공과 빔(수평으로 놓인 막대) 사이에 공을 움직이는 제어 시스템
+- 빔의 기울기를 조절하여 공의 위치를 제어
+- 공의 위치를 측정하고 원하는 위치로 공을 이동시키기 위해 빔의 기울기를 조정
+- 빔의 기울기를 두 가지 값 중 하나로만 전환시켜서 공의 위치 조절
 
 
-
-
-### **메인게임** : 몬스터를 피해 생존자를 구해라
-- 인간 측 플레이어 승리 및 패배 조건 : 생존자 3명 중 2명을 구해 마을을 탈출하게 되면 승, 마을을 탈출하기 전에 체력이 다 소진되면 패배하게 됩니다
-- 몬스터 측 플레이어 승리 및 패배 조건 : 인간 측 플레이어가 생존자를 2명 이상 구하지 못하게 하거나 체력이 모두 소진되게 하면 승리합니다. 인간 츩 플레이어가 생존자를 구하여 마을을 탈출하면 패배하게 됩니다.
-- 이 게임을 진행하면서 생존자를 납치한 몬스터가 있는 칸에 도달하게 되면 미니게임을 시작하여 미니게임을 이기게 되면 생존자를 1명 구할 수 있게 됩니다.
-- 인간 측 플레이어는 칸을 움직일 때마다 일정 체력을 소진하게 됩니다.
-- 몬스터 측 플레이어가 인간 측 플레이어와 접촉할 경우 인간 측 플레이어는 큰 체력을 소진하게 되며 둘의 자리가 바뀌게 됩니다.
-- 인간 측 플레이어는 체력 회복 칸에 가면 일정량의 체력을 회복할 수 있습니다.
-- 몬스터는 게임을 시작한 직후 금지벽 3개를 설치할 수 있습니다.
-- 인간 측 플레이어가 모든 미니게임 칸을 한번씩 가게되면 게임이 종료되며 누가 승리하였는지 판별하게 됩니다.
-- 단, 인간 츨 플레이어가 모든 미니게임에 도달하지 못하였어도 인간 플레이어의 체력이 모두 소진되면 게임이 바로 종료되며 인간 플레이어는 패배하게 됩니다.
-- 말은 양측 플레이어가 번갈아가며 주사위를 굴려 주사위에 나온 수만큼 동,서,남,북을 지정하여 움직이게 됩니다.
-  
-![image](https://github.com/SeoooooNyeong/Game_Project_Java/assets/113419106/3d005da5-5ff0-43c3-918d-8eabddcf1dda)
-
-🟣 - 일반칸
-
-⭕ - 인간 플레이어 말
-
-❤ - 체력 추가칸
-
-💲 - 미니게임 시작칸
-
-👹 - 몬스터 플레이어 말
-
-🚫 - 갈수 없는 벽
-
-
-### **미니게임1** 
-
-<img src = "https://github.com/SeoooooNyeong/Game_Project_Java/assets/113419106/5504719d-1aab-41d8-8d0a-68637194cfc5" width="650px">
-
-### **미니게임2**
-
-<img src = "https://github.com/SeoooooNyeong/Game_Project_Java/assets/113419106/c05ad5cf-1e7a-4143-8ed1-64cb92eb5c18" width="650px">
-
-### **미니게임3**
-
-<img src = "https://github.com/SeoooooNyeong/Game_Project_Java/assets/113419106/11b9bb2a-0152-4b45-9d6c-1d2375eb3d56" width="650px">
+## **PidControl**
+- PID : P(비례), I(적분), D(미분)
+- P : 비례 제어는 현재 오차에 비례하는 제어 출력을 생성. 만약 공이 원하는 위치에서 멀리 떨어져 있다면, 비례 제어는 빔을 강하게 기울여 오차를 빨리 줄이도록 하며, 오차가 줄어들면 빔의 기울기도 줄어듦
+- I : 적분 제어는 과거의 오차를 누적하여 제어 출력을 조절. 오차를 제로로 수렴시키기 위해 사용. 과거에 오차가 적절히 줄어들지 않았을 때, 적분 제어는 오차를 보상하기 위해 누적 오차를 사용
+- D : 미분 제어는 오차의 변화율을 감지하고 제어 출력을 안정화. 오차의 급격한 변화를 예방하고 시스템을 안정화시키는 데 사용. 빠르게 움직이는 공의 위치를 안정화하는 데 미분 제어 사용
+- PID 제어는 비례, 적분 및 미분 요소의 가중합으로 제어 출력을 계산
+- PID 제어로 공의 위치를 정확하게 원하는 위치로 이동시킴, 빔의 기울기를 조절하여 제어 출력 생성
+- 오차를 최소화하고 시스템을 안정화시키기 위해 비례, 적분 및 미분 요소를 조합하여 제어 출력 계
