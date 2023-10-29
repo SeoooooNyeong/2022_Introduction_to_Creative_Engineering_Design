@@ -1,66 +1,66 @@
 #include <Servo.h>
-
 // Arduino pin assignment
 #define PIN_LED 9
-#define PIN_SERVO 10
+#define PIN_SERVO 11
 #define PIN_IR A0
 #define PIN_VAR A3
-
 // Event interval parameters
+//////////////// DO NOT modify below section!! /////////////////////////
 #define _INTERVAL_DIST    20 // distance sensor interval (unit: ms)
 #define _INTERVAL_SERVO   20 // servo interval (unit: ms)
-#define _INTERVAL_SERIAL  20 // serial interval (unit: ms)
-
+#define _INTERVAL_SERIAL  80 // serial interval (unit: ms)
+#define _INTERVAL_MOVE    10000 // mission interval (unit: ms)
+////////////////////////////////////////////////////////////////////////
 // EMA filter configuration for the IR distance sensor
-#define _EMA_ALPHA 0      // EMA weight (range: 0 to 1)
-                          // Setting _EMA_ALPHA to 0 effectively disables EMA filter.
-
+#define _EMA_ALPHA 0.5   // EMA weight of new sample (range: 0 to 1)
 // Servo adjustment
-#define _DUTY_MAX 2500  // Servo angle: D degree
-#define _DUTY_NEU 1100  // Servo angle: 0 degree
-#define _DUTY_MIN 500   // Servo angle: E degree
-#define _SERVO_ANGLE_DIFF 90 // Replace with |D - E| degree
-#define _SERVO_SPEED 1000 // servo speed limit (unit: degree/second)
-
-// PID Constants
-#define KP 0.5
-#define KI 0.1
-#define KD 0.2
-
+#define _DUTY_NEU 1220.834
+#define _DUTY_MIN 700
+#define _DUTY_MAX 2400
+#define _SERVO_ANGLE_DIFF 67   // servo angle difference between _DUTY_MIN and _DUTY_MAX (unit: degree)
+#define _SERVO_SPEED 100 // servo speed limit (unit: degree/second)
+// PID paramete rs
+#define _DIST_TARGET 155 // center of the rail (unit: mm)
+#define _KP 4.185       // proportional gain
+#define _KD 345.0// derivative gain
+#define _KI 1
+// integral gain
+#define _ITERM_MAX 120 // uncomment if necessary
+//////////////// DO NOT modify below section!! /////////////////////////
+unsigned long error_sum, error_cnt, toggle_cnt;
+////////////////////////////////////////////////////////////////////////
 // global variables
-float dist_filtered, dist_ema, dist_target; // unit: mm
-
+float dist_filtered, dist_ema; // unit: mm
 Servo myservo;
-
+int duty_change_per_interval; // maximum duty difference per interval
 int duty_target;    // Target duty
 int duty_curr;      // Current duty
-
+int dist_target;
 unsigned long last_sampling_time_dist;   // unit: msec
 unsigned long last_sampling_time_servo;  // unit: msec
 unsigned long last_sampling_time_serial; // unit: msec
-
+unsigned long last_sampling_time_move; // unit: msec
 bool event_dist, event_servo, event_serial; // event triggered?
-
-// PID Variables
-float previous_error = 0;
-float integral = 0;
-
-void setup() {
+float error_curr, error_prev, control, pterm, dterm, iterm;
+void setup()
+{
   // initialize GPIO pins
   pinMode(PIN_LED, OUTPUT);
   myservo.attach(PIN_SERVO);
   duty_target = duty_curr = _DUTY_NEU;
-
+  myservo.writeMicroseconds(duty_curr);
+  // convert angular speed into duty change per interval.
+  duty_change_per_interval =
+    (_DUTY_MAX - _DUTY_MIN) * (_SERVO_SPEED / (float) _SERVO_ANGLE_DIFF) * (_INTERVAL_SERVO / 1000.0);
   // initialize serial port
   Serial.begin(1000000);
-
-  // Set a target distance
-  dist_target = 155; // 15.5 cm, the center of the rail
+  //////////////// DO NOT modify below section!! /////////////////////////
+  dist_target = 55;
+  ////////////////////////////////////////////////////////////////////////
 }
-
-void loop() {
+void loop()
+{
   unsigned long time_curr = millis();
-
   // wait until next event time
   if (time_curr >= (last_sampling_time_dist + _INTERVAL_DIST)) {
     last_sampling_time_dist += _INTERVAL_DIST;
@@ -74,72 +74,154 @@ void loop() {
     last_sampling_time_serial += _INTERVAL_SERIAL;
     event_serial = true;
   }
-
+  //////////////// DO NOT modify below section!! /////////////////////////
+  if (time_curr >= (last_sampling_time_move + _INTERVAL_MOVE)) {
+    last_sampling_time_move += _INTERVAL_MOVE;
+    dist_target = 310 - dist_target;
+    if (++toggle_cnt == 5) {
+      Serial.println("----------------------------------------------------"),
+                     Serial.print("ERR_cnt:"),
+                     Serial.print(error_cnt);
+      Serial.print(",ERR_sum:"),
+                   Serial.print(error_sum);
+      Serial.print(",ERR_ave:"),
+                   Serial.println(error_sum / (float) error_cnt);
+      exit(0);
+    }
+  }
+  ////////////////////////////////////////////////////////////////////////
   if (event_dist) {
     event_dist = false;
-
-    // get a distance reading from the distance sensor
-    dist_filtered = volt_to_distance(ir_sensor_filtered(10, 0.5)); // Replace n with your desired value
+    // Get a distance reading from the distance sensor
+    dist_filtered = volt_to_distance(ir_sensor_filtered(100, 0.5));
     dist_ema = _EMA_ALPHA * dist_ema + (1.0 - _EMA_ALPHA) * dist_filtered;
-
-    // Calculate the error (how far the current distance is from the target)
-    float error = dist_target - dist_ema;
-
-    // Calculate the control output (duty_target) using PID control
-    float P = KP * error;
-    integral += error * _INTERVAL_DIST / 1000.0; // Discretize integral
-    float I = KI * integral;
-    float derivative = (error - previous_error) / (_INTERVAL_DIST / 1000.0);
-    float D = KD * derivative;
-    duty_target = _DUTY_NEU + P + I + D;
-
-    // Update the previous error for the next iteration
-    previous_error = error;
+    // Update PID variables
+    error_curr = dist_target - dist_ema;
+    //////////////// DO NOT modify below section!! /////////////////////////
+    if (time_curr >= last_sampling_time_move + 3000) {
+      error_cnt++;
+      if (abs(error_curr) > 3) {
+        error_sum += abs(error_curr);
+      }
+    }
+    if (abs(error_curr) <= 3) {
+      digitalWrite(PIN_LED, 0);
+    }
+    else {
+      digitalWrite(PIN_LED, 1);
+    }
+    ////////////////////////////////////////////////////////////////////////
+    if (abs(iterm) > _ITERM_MAX) iterm = 0;
+    pterm = _KP * error_curr;
+    dterm = _KD * (error_curr - error_prev);
+    iterm += _KI * error_curr;
+    control = pterm + dterm + iterm;
+    duty_target = _DUTY_NEU + control;
+    error_prev = error_curr;
   }
-
   if (event_servo) {
     event_servo = false;
-
-    // Clip the duty_target to the valid servo duty range
-    if (duty_target > _DUTY_MAX) {
-      duty_target = _DUTY_MAX;
-    } else if (duty_target < _DUTY_MIN) {
-      duty_target = _DUTY_MIN;
+    // adjust duty_curr toward duty_target by duty_change_per_interval
+    if (duty_target > duty_curr) {
+      duty_curr += duty_change_per_interval;
+      if (duty_curr > duty_target)
+        duty_curr = duty_target;
+    } else {
+      duty_curr -= duty_change_per_interval;
+      if (duty_curr < duty_target)
+        duty_curr = duty_target;
     }
-
-    // Update servo position
-    myservo.writeMicroseconds(duty_target);
+    // update servo position
+    if (duty_curr > _DUTY_MAX) duty_curr = _DUTY_MAX; // for servo arm protection
+    if (duty_curr < _DUTY_MIN) duty_curr = _DUTY_MIN;
+    myservo.writeMicroseconds(duty_curr);
   }
-
   if (event_serial) {
     event_serial = false;
-    // Output the read value to the serial port
-    Serial.print("Min:0,TARGET:");
-    Serial.print(dist_target);
-    Serial.print(",DIST:");
-    Serial.println(dist_ema);
+    if (1) { // use for debugging with serial plotter
+      Serial.print("MIN:0,MAX:310,TARGET:"); Serial.print(dist_target);
+      Serial.print(",DIST:");
+      Serial.print(dist_ema);
+      Serial.print(",ERR_ave(10X):"),
+                   Serial.println(error_sum / (float) error_cnt * 10);
+    }
+    if (0) { // use for debugging with serial monitor
+      Serial.print("MIN:0,MAX:310,TARGET:"); Serial.print(dist_target);
+      Serial.print(",DIST:");
+      Serial.print(dist_ema);
+      Serial.print(",pterm:");
+      Serial.print(pterm);
+      Serial.print(",dterm:");
+      Serial.print(dterm);
+      Serial.print(",iterm:");
+      Serial.print(iterm);
+      Serial.print(",ERR_cnt:"),
+                   Serial.print(error_cnt);
+      Serial.print(",ERR_sum:"),
+                   Serial.print(error_sum);
+      Serial.print(",ERR_curr:"),
+                   Serial.print(abs(error_curr));
+      Serial.print(",ERR_ave:"),
+                   Serial.println(error_sum / (float) error_cnt);
+    }
+    if (0) { // use for evaluation
+      Serial.print("ERR_cnt:"),
+                   Serial.print(error_cnt);
+      Serial.print(",ERR_curr:"),
+                   Serial.print(abs(error_curr));
+      Serial.print(",ERR_sum:"),
+                   Serial.print(error_sum);
+      Serial.print(",ERR_ave:"),
+                   Serial.println(error_sum / (float) error_cnt);
+    }
   }
 }
-
-float volt_to_distance(int a_value) {
-  // Replace the below line with the equation obtained from nonlinear regression analysis
-  return (6762.0 / (a_value - 9) - 4.0) * 10.0;
+float volt_to_distance(int a_value)
+{
+  return 594 + (-1.85) * a_value + (-3.61E-04) * pow(a_value, 2) + 7.46E-06 * pow(a_value, 3) + (-7.33E-09) * pow(a_value, 4);
+  ///594 + -1.85x + -3.61E-04x^2 + 7.46E-06x^3 + -7.33E-09x^4
+  //1138 + (-7.08)*a_value + 0.0176*pow(a_value,2) + (-1.92E-05)*pow(a_value,3) + 7.14E-09*pow(a_value,4);
+  //594 + (-1.85)*a_value + (-3.61E-04)*pow(a_value,2) + 7.46E-06*pow(a_value, 3) + (-7.33E-09)*pow(a_value,4);
+  //return 950 + -6.52*a_value + 0.0202*a_value*a_value + -3E-05*a_value*a_value*a_value + 1.67E-08*a_value*a_value*a_value*a_value ; // Replace this with the equation obtained from nonlinear regression analysis
 }
-
-unsigned int ir_sensor_filtered(unsigned int n, float position) {
+unsigned int ir_sensor_filtered(unsigned int n, float position)
+{
   // Eliminate spiky noise of an IR distance sensor by repeating measurement and taking a middle value
   // n: number of measurement repetition
   // position: the percentile of the sample to be taken (0.0 <= position <= 1.0)
-
   // The output of Sharp infrared sensor includes lots of spiky noise.
   // To eliminate such a spike, ir_sensor_filtered() performs the following two steps:
   // Step 1. Repeat measurement n times and collect n * position smallest samples, where 0 <= postion <= 1.
   // Step 2. Return the largest sample among the collected ones.
-
   unsigned int *ir_val, tmp, ret_idx, ret_val;
   unsigned int start_time;
-
-  ret_idx = (unsigned int)ceil(n * position);
-
+  ret_idx = (unsigned int) ceil(n * position);
   // Step 1. Repeat measurement n times and collect n * position smallest samples.
-  // Note: simple implementation requires an array of n elements
+  // Note: simple implementation requires an array of n elements to store n samples.
+  // Instead, we can save memory by allocating an array of (n * position + 1) elements.
+  ir_val = (unsigned int*) malloc(sizeof(unsigned int) * (ret_idx + 2));
+  ir_val[0] = analogRead(PIN_IR);
+  for (int i = 1; i < n; i++) {
+    int j;
+    if (i < ret_idx + 1) {
+      ir_val[i] = analogRead(PIN_IR);
+      j = i - 1;
+    }
+    else {
+      ir_val[ret_idx + 1] = analogRead(PIN_IR);
+      j = ret_idx;
+    }
+    for ( ; j >= 0; j--) {
+      if (ir_val[j] > ir_val[j + 1]) {
+        tmp = ir_val[j];
+        ir_val[j] = ir_val[j + 1];
+        ir_val[j + 1] = tmp;
+      }
+    }
+  }
+  // Step 2. Return the largest sample among the collected ones.
+  if (position > 0.0) ret_val = ir_val[ret_idx];
+  else ret_val = ir_val[0];
+  free(ir_val);
+  return ret_val;
+}
